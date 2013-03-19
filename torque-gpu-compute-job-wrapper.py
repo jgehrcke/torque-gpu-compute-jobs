@@ -46,20 +46,20 @@ def set_cuda_visible_devices_from_pbs_gpufile():
         sys.exit("Not even one line in '%s' (PBS_GPUFILE)." % pbs_gpufile)
     if len(allocated_gpu_lines) > 1:
         sys.exit("More than one line in '%s' (PBS_GPUFILE). Not supported." %
-             pbs_gpufile)
+            pbs_gpufile)
     # Interpret string of the form 'pi-gpu1'.
     hostname, allocated_gpu = allocated_gpu_lines[0].strip().split("-")
     system_hostname = socket.gethostname()
     if system_hostname != hostname:
         sys.exit(("PBS_GPUFILE hostname ('%s') does not match system "
-                  "hostname ('%s')" % (hostname, system_hostname)))
+                  "hostname ('%s')." % (hostname, system_hostname)))
     if not len(allocated_gpu) > 3:
         sys.exit("Allocated gpu identifier '%s' too short." % allocated_gpu)
     allocated_cpu_id = allocated_gpu[3:]
     try:
         allocated_cpu_id = int(allocated_cpu_id)
     except ValueError:
-        sys.exit("Unexpected gpu identifier '%s' ." % allocated_gpu)
+        sys.exit("Unexpected gpu identifier '%s'." % allocated_gpu)
     os.environ["CUDA_VISIBLE_DEVICES"] = str(allocated_cpu_id)
 
 
@@ -90,7 +90,7 @@ def main():
             
         # With the default settings of None for `stdout`, `stderr`, `stdin` no
         # redirection will occur; the child's file handles are inherited from
-        # the parent.
+        # the parent. The current environment is inherited by the child.
         returncode = subprocess.call(
             args=command,
             stdout=child_stdout,
@@ -107,5 +107,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
