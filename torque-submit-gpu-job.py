@@ -4,27 +4,31 @@
 """
 PBS/Torque job submission wrapper script.
 
-To be used by the end user.
-
 Usage:
-
 submit-gpu-job "command [arg1 [arg2]]" [-o outerrfile]
 
-Basically does:
+It basically does:
 
-echo "python compute-job-wrapper.py 'command' $PWD [-o ]" | \
-    qsub -l nodes=1:gpus=1:ppn=1 -d $PWD
+    echo "python compute-job-wrapper.py 'command' $PWD [-o ]" | \
+        qsub -l nodes=1:gpus=1:ppn=1 -d $PWD
+
+The wrapper on the executing node ensures that stdout and stderror are
+collected and that the environment variable CUDA_VISIBLE_DEVICES is set
+according to the GPU assigned by PBS/Torque.
 """
+
 
 from optparse import OptionParser
 import subprocess
 import sys
+import os
 
 
 def main():
     u = "\n\n%prog 'shell command' [-o output-file-path]"
     d = ("Submit job to Torque GPU queue. The shell command argument must be "
-         "properly quoted.")
+         "properly quoted. The working directory of the job is the current "
+         "working directory.")
     parser = OptionParser(usage=u, description=d)
     parser.add_option("-o", "--output-file", dest="output_file_path",
         help="The stdout and stderr of the job is written to this file.",
@@ -35,49 +39,25 @@ def main():
     options, args = parser.parse_args()
     if len(args) < 1:
         parser.error("The shell command argument is required.")
-    shell_command = args[0]
+    user_shell_command = args[0]
 
+    cwd = os.getcwd()
+    output_file_path = ""
     if options.output_file_path:
         if os.path.isfile(options.output_file_path):
             sys.exit("'%s' already exists. Exit." % options.output_file_path)
+        output_file_path = options.output_file_path
+
+    # The torque-compute-job-wrapper expects two or three arguments:
+    # "shell command lala lulu" "working_directory" [stdout_stderr_file]
+
+    shell_command = ("""echo "torque-compute-job-wrapper '%s' %s %s" | qsub -l nodes=1:gpus=1:ppn=1 -d %s""" %
+        (user_shell_command, cwd, output_file_path, cwd))
+
+    print shell_command
 
 
-
-
-    command = sys.argv[1]
-    working_directory = sys.argv[2]
-    if len(sys.argv) > 3:
-        out_err_file = sys.argv[3]
-    else:
-        out_err_file = None
-    
-    # If `out_err_file` is provided, collect both, stdout and stderr, of the
-    # child process to this file.
-    try:
-        f = None
-        returncode = None
-        child_stdout = None
-        child_stderr = None
-        if out_err_file is not None:
-            f = open(out_err_file, 'w')
-            child_stdout = f
-            child_stderr = subprocess.STDOUT  
-        # With the default settings of None for `stdout`, `stderr`, `stdin` no
-        # redirection will occur; the child's file handles are inherited from
-        # the parent.
-        returncode = subprocess.call(
-            args=command,
-            stdout=child_stdout,
-            stderr=child_stderr,
-            cwd=working_directory,
-            shell=True)
-    finally:
-        if f is not None:
-            f.close()
-        if returncode is None:
-            sys.exit(1)
-        sys.exit(returncode)    
-    
+    returncode = subprocess.call(args=shell_command, shell=True)
 
 if __name__ == "__main__":
     main()

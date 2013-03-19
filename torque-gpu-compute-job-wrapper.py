@@ -19,8 +19,6 @@ need for this wrapper to forward signals to its subprocess.
 
 The command provided is run through a shell, because this is what the user
 expects.
-
-TODO: evaluate GPUFILE and set CUDA_VISIBLE_DEVICES.
 """
 
 
