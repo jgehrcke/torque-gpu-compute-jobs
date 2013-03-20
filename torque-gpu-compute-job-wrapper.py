@@ -63,9 +63,9 @@ def generate_output_filename():
         log.debug("PBS_JOBID environment variable not set.")
         pbs_jobid = "%s.%s" % (os.urandom(2).encode('hex'), SYSTEM_HOSTNAME)
     jobid = "job_%s" % pbs_jobid
-    timestr = time.strftime('%y%m%d-%H%M%S-', time.localtime())
+    timestr = time.strftime('-%y%m%d-%H%M%S', time.localtime())
     suffix = ".log"
-    return "".join([timestr, jobid, suffix])
+    return "".join([jobid, timestr, suffix])
 
 
 def set_cuda_visible_devices_from_pbs_gpufile():
