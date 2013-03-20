@@ -42,6 +42,7 @@ chosen automatically.
 
 import os
 import sys
+import time
 import logging
 from optparse import OptionParser
 from subprocess import Popen, PIPE
@@ -51,6 +52,17 @@ logging.basicConfig(
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 #log.setLevel(logging.INFO)
+
+
+def write_shell_command_file(user_shell_command):
+    prefix = "gpu_job_command_"
+    rnd = os.urandom(5).encode('hex')
+    timestr = time.strftime('%y%m%d%H%M%S-', time.localtime())
+    suffix = ".tmp"
+    command_file_name = "".join([prefix, timestr, rnd, suffix])
+    with open(command_file_name, 'w') as f:
+        f.write(user_shell_command)
+    return command_file_name
 
 
 def main():
@@ -85,10 +97,13 @@ def main():
             print "Warning: '%s' already exists." % options.output_filename
         output_filename = options.output_filename
 
+    # Write user-given shell command to a temp file with unique filename.
+    command_file_name = write_shell_command_file(user_shell_command)
+
     # The torque-compute-job-wrapper expects three arguments:
-    # "shell command lala lulu" "working_directory" "stdout_stderr_filename"
+    # "command_file_name" "working_directory" "stdout_stderr_filename"
     qsub_stdin = """torque-gpu-job-wrapper '%s' %s %s\n""" % (
-        user_shell_command, cwd, output_filename)
+        command_file_name, cwd, output_filename)
 
     # Request one node, one GPU and one virtual core. Tell qsub that the
     # job's working dir is the current working dir. Keep stdout and stderr in
@@ -98,8 +113,9 @@ def main():
         '-l', 'nodes=1:gpus=1:ppn=1',
         '-d', cwd,
         '-k', 'oe']
-    sp = Popen(args=qsub_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = sp.communicate(qsub_stdin)
+    try:
+        sp = Popen(args=qsub_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        out, err = sp.communicate(qsub_stdin)
     if out:
         print "qsub stdout:"
         print "\n".join(l.rstrip() for l in out.splitlines() if l.strip())

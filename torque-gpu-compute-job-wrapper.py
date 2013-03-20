@@ -25,7 +25,7 @@ PBS/Torque job wrapper script. Executes shell command in a child process.
 
 This script is not called directly by the user.
 
-Usage: wrapper "command lala lulu" "working_directory" [stdout_stderr_file]
+Usage: wrapper "command_file_name" "working_directory" [stdout_stderr_file]
 
 Collects standard output and standard error to a file whose name is either
 given by the user or chosen automatically.
@@ -104,16 +104,24 @@ def set_cuda_visible_devices_from_pbs_gpufile():
 
 
 def main():
-    command = sys.argv[1]
+    command_file_name = sys.argv[1]
     working_directory = sys.argv[2]
     if len(sys.argv) > 3:
         out_err_file = sys.argv[3]
     else:
         out_err_file = generate_output_filename()
 
-    log.debug("Command to be executed: %s" % command)
+    log.debug("Command file name: %s" % command_file_name)
     log.debug("Working directory: %s" % working_directory)
     log.debug("Output file: %s" % out_err_file)
+
+    if not os.path.isfile(command_file_name):
+        sys.exit("Not a file: '%s' (command file)" % command_file_name)
+    with open(command_file_name) as f:
+        command = f.read()
+    log.debug("Command to be executed: %s" % command)
+    # Delete temporary file.
+    os.remove(command_file_name)
 
     # Collect both, stdout and stderr, of the child process to `out_err_file`.
     # Also redirect stdout/stderr of this wrapper script. The logging output of
