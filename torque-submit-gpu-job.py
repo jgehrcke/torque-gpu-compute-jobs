@@ -72,7 +72,8 @@ def main():
     d = ("Submit job to Torque GPU queue. The shell command argument must be "
          "properly quoted (as shown in the example above). The working "
          "directory of the job will be the current working directory.")
-    parser = OptionParser(usage=u, description=d)
+    e = "Author: Jan-Philip Gehrcke (http://gehrcke.de)"
+    parser = OptionParser(usage=u, description=d, epilog=e)
     parser.add_option("-o", "--output", dest="output_filename",
         help=("stdout and stderr of the job will be written to this file in "
               "the current working directory. If not provided, a unique name "
