@@ -131,6 +131,7 @@ def main():
     returncode = sp.returncode
     log.debug("qsub returncode: %s" % returncode)
     if returncode == 0:
+        print "Submission success."
         if output_filename:
             print "Job stdout/stderr filename: '%s'." % output_filename
         else:
@@ -138,6 +139,7 @@ def main():
         print "Job command temporarily stored in '%s'." % command_file_name
         print "Don't delete."
     else:
+        print "Submission error."
         os.remove(command_file_name)
 
 
