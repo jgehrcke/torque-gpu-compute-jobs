@@ -33,8 +33,8 @@ given by the user or chosen automatically.
 PBS/Torque uses process session ids to identify processes belonging to a job.
 Signals are sent to all processes in a session:
 http://www.supercluster.org/pipermail/torqueusers/2005-March/001460.html
-A subprocess created from this wrapper belongs to this session i.e. there is no
-need for this wrapper to monitor and forward signals to its subprocess.
+A subprocess created from this wrapper belongs to this session, i.e. there is
+no need for this wrapper to monitor and forward signals to its child process.
 
 As a feature, the command provided is run through a shell.
 """

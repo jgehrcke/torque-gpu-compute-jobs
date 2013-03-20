@@ -20,24 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 """
 PBS/Torque GPU job submission script. Wraps Torque's qsub command.
 
 Usage:
 
-submit-gpu-job "command [arg1 [arg2]]" [-o outerrfile]
+submit-gpu-job 'shell command' [-o outerrfile]
 
 In Bashism, it does:
 
-    echo "python torque-gpu-job-wrapper 'command' $PWD outerrfile " | \
-        qsub -l nodes=1:gpus=1:ppn=1 -d $PWD
+    echo "torque-gpu-job-wrapper 'command' $PWD outerrfile " | \
+        qsub -l nodes=1:gpus=1:ppn=1 -d $PWD -k oe
 
 The wrapper on the executing node ensures that the environment variable
 CUDA_VISIBLE_DEVICES is set according to the GPU assigned by PBS/Torque.
-Furthermore it collects stdout and stderr ob the job script to a file in the
+Furthermore it collects stdout and stderr of the job script to a file in the
 submission directory. If the file name is not explicitly given, a unique one is
-chosen.
+chosen automatically.
 """
 
 
@@ -67,7 +66,7 @@ def main():
     user_shell_command = args[0]
 
     cwd = os.getcwd()
-    output_file_path = ""
+    output_filename = ""
     if options.output_filename:
         if os.sep in options.output_filename:
             sys.exit("'%s' must not contain '%s' characters. Exit." % (
@@ -77,8 +76,6 @@ def main():
         if os.path.isfile(options.output_filename):
             print "Warning: '%s' already exists." % options.output_filename
         output_filename = options.output_filename
-    else:
-        output_filename = ""
 
     # The torque-compute-job-wrapper expects three arguments:
     # "shell command lala lulu" "working_directory" "stdout_stderr_filename"
@@ -86,7 +83,8 @@ def main():
         user_shell_command, cwd, output_filename)
 
     # Request one node, one GPU and one virtual core. Tell qsub that the
-    # job's working dir is the current working dir.
+    # job's working dir is the current working dir. Keep stdout and stderr in
+    # home directory (as long as it leaks the wrapper redirection).
     qsub_command = [
         'qsub',
         '-l', 'nodes=1:gpus=1:ppn=1',
@@ -96,10 +94,10 @@ def main():
     out, err = sp.communicate(qsub_stdin)
     if out:
         print "qsub stdout:"
-        print out
+        print "\n".join(l.rstrip() for l in out.splitlines() if l.strip())
     if err:
         print "qsub stderr:"
-        print err
+        print "\n".join(l.rstrip() for l in err.splitlines() if l.strip())
     returncode = sp.returncode
     # print "qsub returncode: %s" % returncode
     if returncode == 0:
