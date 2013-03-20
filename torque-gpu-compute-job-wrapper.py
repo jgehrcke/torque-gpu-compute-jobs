@@ -111,6 +111,10 @@ def main():
     else:
         out_err_file = generate_output_filename()
 
+    log.debug("Command to be executed: %s" % command)
+    log.debug("Working directory: %s" % working_directory)
+    log.debug("Output file: %s" % out_err_file)
+
     # Collect both, stdout and stderr, of the child process to `out_err_file`.
     # Also redirect stdout/stderr of this wrapper script. The logging output of
     # this wrapper script still goes to original stderr.

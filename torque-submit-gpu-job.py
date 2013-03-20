@@ -40,10 +40,17 @@ chosen automatically.
 """
 
 
+import os
+import sys
+import logging
 from optparse import OptionParser
 from subprocess import Popen, PIPE
-import sys
-import os
+
+logging.basicConfig(
+    format='%(asctime)s,%(msecs)-6.1f: %(message)s', datefmt='%H:%M:%S')
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
+#log.setLevel(logging.INFO)
 
 
 def main():
@@ -64,6 +71,7 @@ def main():
     if len(args) < 1:
         parser.error("The shell command argument is required.")
     user_shell_command = args[0]
+    log.debug("Shell command:'%s'" % user_shell_command)
 
     cwd = os.getcwd()
     output_filename = ""
