@@ -21,40 +21,43 @@
 # THE SOFTWARE.
 
 """
-PBS/Torque job wrapper script.
+PBS/Torque job wrapper script. Executes shell command in a child process.
 
-usage: script "command lala lulu" "working_directory" [stdout_stderr_file]
+This script is not called directly by the user.
 
-Collects standard output and standard error to a file (optionally).
-Only rudimentary error checking, is not called directly by the user.
+Usage: wrapper "command lala lulu" "working_directory" [stdout_stderr_file]
 
-PBS/Torque use process session ids to identify processes belonging to a job
-and signals are sent to all processes in a session:
+Collects standard output and standard error to a file whose name is either
+given by the user or chosen automatically.
+
+PBS/Torque uses process session ids to identify processes belonging to a job.
+Signals are sent to all processes in a session:
 http://www.supercluster.org/pipermail/torqueusers/2005-March/001460.html
-
 A subprocess created from this wrapper belongs to this session i.e. there is no
-need for this wrapper to forward signals to its subprocess.
+need for this wrapper to monitor and forward signals to its subprocess.
 
-The command provided is run through a shell, because this is what the user
-expects.
+As a feature, the command provided is run through a shell.
 """
 
 
-import subprocess
-import sys
 import os
-import socket
+import sys
 import time
+import socket
 import logging
+import subprocess
+
+
 logging.basicConfig(
     format='%(asctime)s,%(msecs)-6.1f: %(message)s', datefmt='%H:%M:%S')
 log = logging.getLogger()
-#log.setLevel(logging.DEBUG)
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
+#log.setLevel(logging.INFO)
 SYSTEM_HOSTNAME = socket.gethostname()
 
 
 def generate_output_filename():
+    log.debug("Generate output filename from PBS_JOBID, time, and hostname.")
     pbs_jobid = os.environ.get('PBS_JOBID')
     if pbs_jobid is None:
         log.debug("PBS_JOBID environment variable not set.")
@@ -68,32 +71,36 @@ def generate_output_filename():
 def set_cuda_visible_devices_from_pbs_gpufile():
     pbs_gpufile = os.environ.get('PBS_GPUFILE')
     if pbs_gpufile is None:
-        sys.exit("PBS_GPUFILE environment variable not set.")
+        sys.exit("PBS_GPUFILE environment variable not set. Exit.")
     if not os.path.isfile(pbs_gpufile):
-        sys.exit("Not a file: '%s' (PBS_GPUFILE)." % pbs_gpufile)
+        sys.exit("Not a file: '%s' (PBS_GPUFILE). Exit." % pbs_gpufile)
+    log.debug("Valid file path '%s' read from PBS_GPUFILE" % pbs_gpufile)
     try:
         with open(pbs_gpufile) as f:
             allocated_gpu_lines = [l for l in f]
     except OSError:
-        sys.exit("Could not open file: '%s' (PBS_GPUFILE)." % pbs_gpufile)
-    if not allocated_gpu_lines:
-        sys.exit("Not even one line in '%s' (PBS_GPUFILE)." % pbs_gpufile)
-    if len(allocated_gpu_lines) > 1:
-        sys.exit("More than one line in '%s' (PBS_GPUFILE). Not supported." %
+        sys.exit("Cannot open file: '%s' (PBS_GPUFILE). Exit." % pbs_gpufile)
+    log.debug("'%s' content:\n%s" % (pbs_gpufile,"".join(allocated_gpu_lines)))
+    if len(allocated_gpu_lines) != 1:
+        sys.exit("Only one line in '%s' (PBS_GPUFILE) is supported. Exit." %
             pbs_gpufile)
-    # Interpret string of the form 'pi-gpu1'.
+    # Evaluate string of the form 'pi-gpu1'.
     hostname, allocated_gpu = allocated_gpu_lines[0].strip().split("-")
     if hostname != SYSTEM_HOSTNAME:
         sys.exit(("PBS_GPUFILE hostname ('%s') does not match system "
                   "hostname ('%s')." % (hostname, SYSTEM_HOSTNAME)))
+    log.debug("PBS_GPUFILE hostname ('%s') matches system hostname." %
+        hostname)
     if not len(allocated_gpu) > 3:
         sys.exit("Allocated gpu identifier '%s' too short." % allocated_gpu)
-    allocated_cpu_id = allocated_gpu[3:]
+    allocated_gpu_id = allocated_gpu[3:]
     try:
-        allocated_cpu_id = int(allocated_cpu_id)
+        allocated_gpu_id = int(allocated_gpu_id)
     except ValueError:
         sys.exit("Unexpected gpu identifier '%s'." % allocated_gpu)
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(allocated_cpu_id)
+    log.debug("Allocated GPU ID given by PBS: %s" % allocated_gpu_id)
+    log.debug("Setting CUDA_VISIBLE_DEVICES.")
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(allocated_gpu_id)
 
 
 def main():
