@@ -111,24 +111,23 @@ def main():
     else:
         out_err_file = generate_output_filename()
 
-    # If `out_err_file` is provided, collect both, stdout and stderr, of the
-    # child process to this file. Also, collect output of this wrapper script
-    # to this file.
+    # Collect both, stdout and stderr, of the child process to `out_err_file`.
+    # Also redirect stdout/stderr of this wrapper script. The logging output of
+    # this wrapper script still goes to original stderr.
     try:
         f = None
         returncode = None
-
         f = open(out_err_file, 'w')
         child_stdout = f
         child_stderr = subprocess.STDOUT
         sys.stdout = f
         sys.stderr = sys.stdout
 
+        # Evaluate PBS_GPUFILE and set CUDA_VISIBLE_DEVICES. Exit on failure.
         set_cuda_visible_devices_from_pbs_gpufile()
 
-        # With the default settings of None for `stdout`, `stderr`, `stdin` no
-        # redirection will occur; the child's file handles are inherited from
-        # the parent. The current environment is inherited by the child.
+        # Flush output stream, call child process with shell command.
+        sys.stdout.flush()
         returncode = subprocess.call(
             args=command,
             stdout=child_stdout,
