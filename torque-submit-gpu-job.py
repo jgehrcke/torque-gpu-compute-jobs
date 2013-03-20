@@ -51,8 +51,8 @@ from subprocess import Popen, PIPE
 logging.basicConfig(
     format='%(asctime)s,%(msecs)-6.1f: %(message)s', datefmt='%H:%M:%S')
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-#log.setLevel(logging.INFO)
+#log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 SYSTEM_HOSTNAME = socket.gethostname()
 
 
@@ -129,7 +129,7 @@ def main():
         print "qsub stderr:"
         print "\n".join(l.rstrip() for l in err.splitlines() if l.strip())
     returncode = sp.returncode
-    # print "qsub returncode: %s" % returncode
+    log.debug("qsub returncode: %s" % returncode)
     if returncode == 0:
         if output_filename:
             print "Job stdout/stderr filename: '%s'." % output_filename

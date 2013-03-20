@@ -51,8 +51,8 @@ import subprocess
 logging.basicConfig(
     format='%(asctime)s,%(msecs)-6.1f: %(message)s', datefmt='%H:%M:%S')
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-#log.setLevel(logging.INFO)
+#log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 SYSTEM_HOSTNAME = socket.gethostname()
 
 
