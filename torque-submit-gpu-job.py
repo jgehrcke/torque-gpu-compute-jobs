@@ -23,9 +23,10 @@ chosen.
 
 
 from optparse import OptionParser
-import subprocess
+from subprocess import Popen, PIPE
 import sys
 import os
+import time
 
 
 def main():
@@ -49,26 +50,42 @@ def main():
 
     cwd = os.getcwd()
     output_file_path = ""
-    if options.output_file_path:
-        if os.path.isfile(options.output_file_path):
-            sys.exit("'%s' already exists. Exit." % options.output_file_path)
-        output_file_path = options.output_file_path
-
-    # TODO: validate output filename, do not allow path separators, set
-    # output_filename.
+    if options.output_filename:
+        if os.sep in options.output_filename:
+            sys.exit("'%s' must not contain '%s' characters. Exit." % (
+                options.output_filename, os.sep))
+        if os.path.isdir(options.output_filename):
+            print "'%s' is a directory. Exit." % options.output_filename
+        if os.path.isfile(options.output_filename):
+            print "Warning: '%s' already exists." % options.output_filename
+        output_filename = options.output_filename
+    else:
+        rndstr = os.urandom(2).encode('hex')
+        timestr = time.strftime('%y%m%d-%H%M%S-', time.localtime())
+        suffix = "_gpujob.log"
+        output_filename = "%s%s%s" % (timestr, rndstr, suffix)
 
     # The torque-compute-job-wrapper expects three arguments:
     # "shell command lala lulu" "working_directory" "stdout_stderr_filename"
-
-    qsub_stdin = """torque-gpu-job-wrapper '%s' %s %s""" % (
+    qsub_stdin = """torque-gpu-job-wrapper '%s' %s %s\n""" % (
         user_shell_command, cwd, output_filename)
 
+    # Request one node, one GPU and one virtual core. Tell qsub that the
+    # job's working dir is the current working dir.
     qsub_command = ['qsub', '-l', 'nodes=1:gpus=1:ppn=1', '-d', cwd]
-
-    sp = subprocess.Popen(args=qsub_command)
+    sp = Popen(args=qsub_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
     out, err = sp.communicate(qsub_stdin)
-
+    if out:
+        print "qsub stdout:"
+        print out
+    if err:
+        print "qsub stderr:"
+        print err
     returncode = sp.returncode
+    % print "qsub returncode: %s" % returncode
+    if returncode == 0:
+        print "Job stdout/stderr filename: '%s'" % output_filename
+
 
 if __name__ == "__main__":
     main()
