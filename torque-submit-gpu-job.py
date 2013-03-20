@@ -43,6 +43,7 @@ chosen automatically.
 import os
 import sys
 import time
+import socket
 import logging
 from optparse import OptionParser
 from subprocess import Popen, PIPE
@@ -52,13 +53,14 @@ logging.basicConfig(
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 #log.setLevel(logging.INFO)
+SYSTEM_HOSTNAME = socket.gethostname()
 
 
 def write_shell_command_file(user_shell_command):
     prefix = "gpu_job_command_"
     rnd = os.urandom(5).encode('hex')
     timestr = time.strftime('%y%m%d%H%M%S-', time.localtime())
-    suffix = ".tmp"
+    suffix = ".%s.tmp" % SYSTEM_HOSTNAME
     command_file_name = "".join([prefix, timestr, rnd, suffix])
     with open(command_file_name, 'w') as f:
         f.write(user_shell_command)
@@ -116,6 +118,10 @@ def main():
     try:
         sp = Popen(args=qsub_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = sp.communicate(qsub_stdin)
+    except:
+        # Remove tempfile and re-raise exception.
+        os.remove(command_file_name)
+        raise
     if out:
         print "qsub stdout:"
         print "\n".join(l.rstrip() for l in out.splitlines() if l.strip())
@@ -129,6 +135,10 @@ def main():
             print "Job stdout/stderr filename: '%s'." % output_filename
         else:
             print "Job stdout/stderr filename will be chosen automatically."
+        print "Job command temporarily stored in '%s'." % command_file_name
+        print "Don't delete."
+    else:
+        os.remove(command_file_name)
 
 
 if __name__ == "__main__":
