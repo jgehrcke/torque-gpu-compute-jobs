@@ -26,7 +26,6 @@ from optparse import OptionParser
 from subprocess import Popen, PIPE
 import sys
 import os
-import time
 
 
 def main():
@@ -60,10 +59,7 @@ def main():
             print "Warning: '%s' already exists." % options.output_filename
         output_filename = options.output_filename
     else:
-        rndstr = os.urandom(2).encode('hex')
-        timestr = time.strftime('%y%m%d-%H%M%S-', time.localtime())
-        suffix = "_gpujob.log"
-        output_filename = "%s%s%s" % (timestr, rndstr, suffix)
+        output_filename = ""
 
     # The torque-compute-job-wrapper expects three arguments:
     # "shell command lala lulu" "working_directory" "stdout_stderr_filename"
@@ -88,7 +84,10 @@ def main():
     returncode = sp.returncode
     # print "qsub returncode: %s" % returncode
     if returncode == 0:
-        print "Job stdout/stderr filename: '%s'" % output_filename
+        if output_filename:
+            print "Job stdout/stderr filename: '%s'." % output_filename
+        else:
+            print "Job stdout/stderr filename will be chosen automatically."
 
 
 if __name__ == "__main__":

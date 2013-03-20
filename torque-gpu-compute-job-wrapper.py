@@ -26,10 +26,28 @@ import subprocess
 import sys
 import os
 import socket
+import time
+import logging
+logging.basicConfig(
+    format='%(asctime)s,%(msecs)-6.1f: %(message)s', datefmt='%H:%M:%S')
+log = logging.getLogger()
+#log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
+SYSTEM_HOSTNAME = socket.gethostname()
+
+
+def generate_output_filename():
+    pbs_jobid = os.environ.get('PBS_JOBID')
+    if pbs_jobid is None:
+        log.debug("PBS_JOBID environment variable not set.")
+        pbs_jobid = "%s.%s" % (os.urandom(2).encode('hex'), SYSTEM_HOSTNAME)
+    jobid = "job_%s" % pbs_jobid
+    timestr = time.strftime('%y%m%d-%H%M%S-', time.localtime())
+    suffix = ".log"
+    return "".join([timestr, jobid, suffix])
 
 
 def set_cuda_visible_devices_from_pbs_gpufile():
-    # Be graceful regarding errors.
     pbs_gpufile = os.environ.get('PBS_GPUFILE')
     if pbs_gpufile is None:
         sys.exit("PBS_GPUFILE environment variable not set.")
@@ -37,7 +55,7 @@ def set_cuda_visible_devices_from_pbs_gpufile():
         sys.exit("Not a file: '%s' (PBS_GPUFILE)." % pbs_gpufile)
     try:
         with open(pbs_gpufile) as f:
-            allocated_gpu_lines = [l for l in f] 
+            allocated_gpu_lines = [l for l in f]
     except OSError:
         sys.exit("Could not open file: '%s' (PBS_GPUFILE)." % pbs_gpufile)
     if not allocated_gpu_lines:
@@ -47,10 +65,9 @@ def set_cuda_visible_devices_from_pbs_gpufile():
             pbs_gpufile)
     # Interpret string of the form 'pi-gpu1'.
     hostname, allocated_gpu = allocated_gpu_lines[0].strip().split("-")
-    system_hostname = socket.gethostname()
-    if system_hostname != hostname:
+    if hostname != SYSTEM_HOSTNAME:
         sys.exit(("PBS_GPUFILE hostname ('%s') does not match system "
-                  "hostname ('%s')." % (hostname, system_hostname)))
+                  "hostname ('%s')." % (hostname, SYSTEM_HOSTNAME)))
     if not len(allocated_gpu) > 3:
         sys.exit("Allocated gpu identifier '%s' too short." % allocated_gpu)
     allocated_cpu_id = allocated_gpu[3:]
@@ -67,7 +84,7 @@ def main():
     if len(sys.argv) > 3:
         out_err_file = sys.argv[3]
     else:
-        out_err_file = None
+        out_err_file = generate_output_filename()
 
     # If `out_err_file` is provided, collect both, stdout and stderr, of the
     # child process to this file. Also, collect output of this wrapper script
@@ -75,17 +92,15 @@ def main():
     try:
         f = None
         returncode = None
-        child_stdout = None
-        child_stderr = None
-        if out_err_file is not None:
-            f = open(out_err_file, 'w')
-            child_stdout = f
-            child_stderr = subprocess.STDOUT
-            sys.stdout = f
-            sys.stderr = sys.stdout
-        
-        set_cuda_visible_devices_from_pbs_gpufile()    
-            
+
+        f = open(out_err_file, 'w')
+        child_stdout = f
+        child_stderr = subprocess.STDOUT
+        sys.stdout = f
+        sys.stderr = sys.stdout
+
+        set_cuda_visible_devices_from_pbs_gpufile()
+
         # With the default settings of None for `stdout`, `stderr`, `stdin` no
         # redirection will occur; the child's file handles are inherited from
         # the parent. The current environment is inherited by the child.
@@ -100,9 +115,8 @@ def main():
             f.close()
         if returncode is None:
             sys.exit(1)
-        sys.exit(returncode)    
-    
+        sys.exit(returncode)
+
 
 if __name__ == "__main__":
     main()
-
