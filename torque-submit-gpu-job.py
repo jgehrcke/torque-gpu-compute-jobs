@@ -32,8 +32,8 @@ import time
 def main():
     u = "\n\n%prog 'shell command' [-o output-filename]"
     d = ("Submit job to Torque GPU queue. The shell command argument must be "
-         "properly quoted. The working directory of the job is the current "
-         "working directory.")
+         "properly quoted (as shown in the example above). The working "
+         "directory of the job will be the current working directory.")
     parser = OptionParser(usage=u, description=d)
     parser.add_option("-o", "--output", dest="output_filename",
         help=("stdout and stderr of the job will be written to this file in "
@@ -72,7 +72,11 @@ def main():
 
     # Request one node, one GPU and one virtual core. Tell qsub that the
     # job's working dir is the current working dir.
-    qsub_command = ['qsub', '-l', 'nodes=1:gpus=1:ppn=1', '-d', cwd]
+    qsub_command = [
+        'qsub',
+        '-l', 'nodes=1:gpus=1:ppn=1',
+        '-d', cwd,
+        '-k', 'oe']
     sp = Popen(args=qsub_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
     out, err = sp.communicate(qsub_stdin)
     if out:
@@ -82,12 +86,10 @@ def main():
         print "qsub stderr:"
         print err
     returncode = sp.returncode
-    % print "qsub returncode: %s" % returncode
+    # print "qsub returncode: %s" % returncode
     if returncode == 0:
         print "Job stdout/stderr filename: '%s'" % output_filename
 
 
 if __name__ == "__main__":
     main()
-
-
