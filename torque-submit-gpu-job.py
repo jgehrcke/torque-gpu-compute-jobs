@@ -138,8 +138,8 @@ def main():
             print "Job stdout/stderr filename: '%s'." % output_filename
         else:
             print "Job stdout/stderr filename will be chosen automatically."
-        print "Job command temporarily stored in '%s'." % command_file_name
-        print "Don't delete."
+        print "Job command temporarily stored in '%s'. Don't delete." %
+            command_file_name
     else:
         print "Submission error."
         os.remove(command_file_name)
