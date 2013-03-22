@@ -29,7 +29,7 @@ submit-gpu-job 'shell command' [-o outerrfile]
 
 In Bashism, it does:
 
-    echo "torque-gpu-job-wrapper 'command' $PWD outerrfile " | \
+    echo "torque-gpu-job-wrapper command_file_name $PWD outerrfile " | \
         qsub -l nodes=1:gpus=1:ppn=1 -d $PWD -V -k oe
 
 The wrapper on the executing node ensures that the environment variable
