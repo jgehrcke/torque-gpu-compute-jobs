@@ -30,7 +30,7 @@ submit-gpu-job 'shell command' [-o outerrfile]
 In Bashism, it does:
 
     echo "torque-gpu-job-wrapper 'command' $PWD outerrfile " | \
-        qsub -l nodes=1:gpus=1:ppn=1 -d $PWD -k oe
+        qsub -l nodes=1:gpus=1:ppn=1 -d $PWD -V -k oe
 
 The wrapper on the executing node ensures that the environment variable
 CUDA_VISIBLE_DEVICES is set according to the GPU assigned by PBS/Torque.
@@ -115,6 +115,7 @@ def main():
         'qsub',
         '-l', 'nodes=1:gpus=1:ppn=1',
         '-d', cwd,
+        '-V',
         '-k', 'oe']
     try:
         sp = Popen(args=qsub_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
